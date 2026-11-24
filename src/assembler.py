@@ -21,6 +21,24 @@ class Instruction:
     c: int
 
 
+def parse_register(target: str, value: str) -> Instruction:
+    """Разбираем запись в регистр."""
+    reg = int(target[1:])
+    if value.startswith("M[") and value.endswith("]"):
+        return Instruction("READ", 4, int(value[2:-1]), reg)
+    return Instruction("CONST", 45, int(value), reg)
+
+
+def parse_memory(target: str, value: str) -> Instruction:
+    """Разбираем запись в память."""
+    addr = int(target[2:-1])
+    if value.startswith("sgn(R") and value.endswith(")"):
+        return Instruction("SGN", 98, int(value[5:-1]), addr)
+    if value.startswith("R") and value[1:].isdigit():
+        return Instruction("WRITE", 62, addr, int(value[1:]))
+    raise ValueError(f"Unknown memory operand: {value}")
+
+
 def parse_line(line: str) -> Instruction | None:
     """Разбираем присваивание с регистром и памятью."""
     line = line.split("#", 1)[0].strip().replace(" ", "")
@@ -30,16 +48,9 @@ def parse_line(line: str) -> Instruction | None:
         raise ValueError(f"Expected assignment: {line}")
     target, value = line.split("=", 1)
     if target.startswith("R") and target[1:].isdigit():
-        reg = int(target[1:])
-        if value.startswith("M[") and value.endswith("]"):
-            return Instruction("READ", 4, int(value[2:-1]), reg)
-        return Instruction("CONST", 45, int(value), reg)
+        return parse_register(target, value)
     if target.startswith("M[") and target.endswith("]"):
-        addr = int(target[2:-1])
-        if value.startswith("sgn(R") and value.endswith(")"):
-            return Instruction("SGN", 98, int(value[5:-1]), addr)
-        if value.startswith("R") and value[1:].isdigit():
-            return Instruction("WRITE", 62, addr, int(value[1:]))
+        return parse_memory(target, value)
     raise ValueError(f"Unknown instruction: {line}")
 
 
